@@ -94,7 +94,7 @@ def removeTag(itemId, unwantedTag, token, portalUrl):
         # Get the item info
         itemInfo = urllib.urlopen(portalUrl + "/sharing/rest/content/items/" + itemId + "?" + params).read()
 
-        # Find items with the unwanted tag and remove it
+        # Find items with the unwanted tag and remove the tag
         if unwantedTag in itemInfo['tags']:
             tags = itemInfo['tags']
             tags.remove(unwantedTag)
@@ -113,9 +113,9 @@ def removeTag(itemId, unwantedTag, token, portalUrl):
             if modResponse.has_key('error'):
                 raise AGOPostError(webmapId, modResponse['error']['message'])
             else:
-                print 'Successfully updated the urls'
+                print 'Successfully removed the tag.'
         else:
-            print 'Didn\'t find any services with ' + oldUrl
+            print 'Didn\'t find any items with ' + unwantedTag
     except ValueError as e:
         print 'Error - no web map specified'
     except AGOPostError as e:
@@ -180,8 +180,6 @@ if __name__ == '__main__':
                            token=token)
 
     for item in content:
-        if item['type'] == 'Web Map':
-            updateWebmapService(item['id'], oldUrl, newUrl, token=token,
-                                portalUrl=portal)
+        removeTag(item['id'], unwantedTag, token=token, portalUrl=portal)
 
     print 'Update complete.'
