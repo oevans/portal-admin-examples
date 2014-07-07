@@ -2,9 +2,8 @@
 # Requires Python 2.7+
 
 # Sample Usage:
-# python updateWebmapServices.py <sourcePortal> <sourceAdmin> <sourcePassword>
-#                                <query> <oldUrl> <newUrl>
-
+# python updateWebmapServices.py <portalUrl> <adminUser> <adminPassword>
+#                                <query> <unwantedTag>
 import urllib
 import json
 import argparse
@@ -84,30 +83,21 @@ def __search__(portalUrl, query=None, numResults=100, sortField='numviews',
     results = json.loads(urllib.urlopen(request).read())
     return results
 
-def updateWebmapService(webmapId, oldUrl, newUrl, token, portalUrl):
-    '''Replaces the URL for a specified map service in a web map.'''
+
+def removeTag(itemId, unwantedTag, token, portalUrl):
+    '''Removes the unwanted tag from an item.'''
     try:
         params = urllib.urlencode({'token' : token,
                                    'f' : 'json'})
-        print 'Getting Info for: ' + webmapId
-        # Get the item data.
-        reqUrl = (portalUrl + '/sharing/content/items/' + webmapId +
-                  '/data?' + params)
-        itemDataReq = urllib.urlopen(reqUrl).read()
-        itemString = str(itemDataReq)
+        print 'Getting Info for: ' + itemId
 
-        # Find the service URL to be replaced.
-        if itemString.find(oldUrl) > -1:
-            newString = itemString.replace(oldUrl, newUrl)
-            # Get the item's info for the addItem parameters
-            itemInfoReq = urllib.urlopen(portalUrl +
-                                         '/sharing/content/items/' +
-                                         webmapId + '?' + params)
-            itemInfo = json.loads(itemInfoReq.read(),
-                                  object_hook=__decodeDict__)
-            print 'Updating ' + itemInfo['title']
+        # Get the item info
+        itemInfo = urllib.urlopen(portalUrl + "/sharing/rest/content/items/" + itemId + "?" + params).read()
 
-            # Post back the changes overwriting the old map
+        # Find items with the unwanted tag and remove it
+        if unwantedTag in itemInfo['tags']:
+            tags = itemInfo['tags']
+            tags.remove(unwantedTag)
             modRequest = urllib.urlopen(portalUrl +
                                         '/sharing/content/users/' +
                                         itemInfo['owner'] +
@@ -115,7 +105,7 @@ def updateWebmapService(webmapId, oldUrl, newUrl, token, portalUrl):
                                         '/items/' + webmapId +
                                         '/update?' + params ,
                                         urllib.urlencode(
-                                            {'text' : newString}
+                                            {'tags' : tags}
                                         ))
 
             # Evaluate the results to make sure it happened
@@ -171,16 +161,14 @@ if __name__ == '__main__':
     parser.add_argument('username', help='username')
     parser.add_argument('password', help='password')
     parser.add_argument('query', help='search string to find content')
-    parser.add_argument('oldUrl', help='the URL to replace')
-    parser.add_argument('newUrl', help='the new URL')
+    parser.add_argument('unwantedTag', help='the tag to remove')
     # Read the command line arguments.
     args = parser.parse_args()
     portal = args.portal
     username = args.username
     password = args.password
     query = args.query
-    oldUrl = args.oldUrl
-    newUrl = args.newUrl
+    unwantedTag = args.unwantedTag
 
     # Get a token for the source Portal for ArcGIS.
     token = generateToken(username=username, password=password,
